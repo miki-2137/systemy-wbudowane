@@ -121,8 +121,17 @@ void queue(){
     }
 }
 
-void random(){
+void prng(){
+    static unsigned char lfsr = 1; // Ziarno, startujemy od 1
     
+    LATA = lfsr & 0x3F; // Pokazujemy tylko 6 diod (0x3F to 00111111)
+    
+    // Sprawdzamy czy najmłodszy bit (skrajny prawy) to 1
+    if (lfsr & 1) {
+        lfsr = (lfsr >> 1) ^ 0b0111001; // Przesuń o 1 w prawo i zrób XOR z konfiguracją
+    } else {
+        lfsr = (lfsr >> 1); // Jak to było 0, to po prostu przesuń o 1 w prawo
+    }
 }
 
 int main(void) {
@@ -148,7 +157,7 @@ int main(void) {
             case 6: bcdDown(); break;
             case 7: snake(); break;
             case 8: queue(); break;
-            case 9: random(); break;
+            case 9: prng(); break;
         }
         
         // 2. Globalne opóźnienie definiujące szybkość zmiany klatek
