@@ -1,17 +1,31 @@
-/*
- * File:   main.c
- * Author: local
- *
- * Created on 15 kwietnia 2026, 10:49
- */
+// PIC24FJ128GA010 Configuration Bit Settings
+
+// 'C' source line config statements
+
+// CONFIG2
+#pragma config POSCMOD = XT             // Primary Oscillator Select (XT Oscillator mode selected)
+#pragma config OSCIOFNC = ON            // Primary Oscillator Output Function (OSC2/CLKO/RC15 functions as port I/O (RC15))
+#pragma config FCKSM = CSDCMD           // Clock Switching and Monitor (Clock switching and Fail-Safe Clock Monitor are disabled)
+#pragma config FNOSC = PRI              // Oscillator Select (Primary Oscillator (XT, HS, EC))
+#pragma config IESO = ON                // Internal External Switch Over Mode (IESO mode (Two-Speed Start-up) enabled)
+
+// CONFIG1
+#pragma config WDTPS = PS32768          // Watchdog Timer Postscaler (1:32,768)
+#pragma config FWPSA = PR128            // WDT Prescaler (Prescaler ratio of 1:128)
+#pragma config WINDIS = ON              // Watchdog Timer Window (Standard Watchdog Timer enabled,(Windowed-mode is disabled))
+#pragma config FWDTEN = ON              // Watchdog Timer Enable (Watchdog Timer is enabled)
+#pragma config ICS = PGx2               // Comm Channel Select (Emulator/debugger uses EMUC2/EMUD2)
+#pragma config GWRP = OFF               // General Code Segment Write Protect (Writes to program memory are allowed)
+#pragma config GCP = OFF                // General Code Segment Code Protect (Code protection is disabled)
+#pragma config JTAGEN = OFF             // JTAG Port Enable (JTAG port is disabled)
+
+// #pragma config statements should precede project file includes.
+// Use project enums instead of #define for ON and OFF.
 
 #include "xc.h"
 #include "libpic30.h"
 #include "stdbool.h"
 #include <stdint.h>
-
-// Ustawiamy jedno opóźnienie w main(), więc usuwamy delay z funkcji
-// Zmienne 'static' sprawiają, że funkcja pamięta wartość przy kolejnym wywołaniu
 
 void binaryUp(){
     static unsigned char count = 0;
@@ -50,14 +64,7 @@ void bcdUp(){
         if(dziesiatki > 9){
             dziesiatki = 0;
         }
-    }//LUB:
-    static int count = 0;
-    // BCD: (dziesiątki przesunięte o 4 bity w lewo) LUB (jednostki)
-    unsigned int bcd = ((count / 10) << 4) | (count % 10);
-    LATA = bcd;
-    
-    count++;
-    if (count > 99) count = 0;
+    }
 }
 
 void bcdDown(){
@@ -73,13 +80,7 @@ void bcdDown(){
         if(dziesiatki < 0){
             dziesiatki = 9;
         }
-    }//LUB:
-    static int count = 99;
-    unsigned int bcd = ((count / 10) << 4) | (count % 10);
-    LATA = bcd;
-    
-    count--;
-    if (count < 0) count = 99;
+    }
 }
 
 void snake(){
@@ -99,55 +100,47 @@ void snake(){
 }
 
 void queue(){
-    static int zapalone = 0;
-    static int kropka = 1;
+    static int q = 0;
+    static int walk = 1;
     
-    // Dodajemy zapalone diody i tę aktualnie lecącą
-    LATA = zapalone + kropka; 
+    LATA = q + walk; 
     
-    int nastepny_krok = kropka * 2; // Sprawdzamy gdzie kropka będzie za chwilę
+    int next_step = walk * 2;
     
-    // 128 to ostatnia dioda (ósmy bit)
-    if (kropka == 128 || (nastepny_krok & zapalone) > 0) {
-        zapalone = zapalone + kropka; // Przyklej kropkę do zapalonych
-        kropka = 1;                   // Nowa kropka startuje od początku
+    if (walk == 128 || (next_step & q) > 0) {
+        q += walk;
+        walk = 1;
         
-        // 255 to wszystkie 8 diod zapalone
-        if (zapalone == 255) {
-            zapalone = 0;             // Wyczyść planszę
+        if (q == 255) {
+            q = 0;
         }
     } else {
-        kropka = kropka * 2;          // Lecimy dalej w lewo
+        walk = walk * 2;
     }
 }
 
 void prng(){
-    static unsigned char lfsr = 1; // Ziarno, startujemy od 1
+    static unsigned char lfsr = 1;
     
-    LATA = lfsr & 0x3F; // Pokazujemy tylko 6 diod (0x3F to 00111111)
-    
-    // Sprawdzamy czy najmłodszy bit (skrajny prawy) to 1
+    LATA = lfsr & 0x3F;
     if (lfsr & 1) {
-        lfsr = (lfsr >> 1) ^ 0b0111001; // Przesuń o 1 w prawo i zrób XOR z konfiguracją
+        lfsr = (lfsr >> 1) ^ 0b0111001;
     } else {
-        lfsr = (lfsr >> 1); // Jak to było 0, to po prostu przesuń o 1 w prawo
+        lfsr = (lfsr >> 1);
     }
 }
 
 int main(void) {
     int value = 1;
     
-    TRISA = 0x0000; // PORTA jako wyjścia (diody)
-    TRISD = 0xFFFF; // PORTD jako wejścia (przyciski)
+    TRISA = 0x0000;
+    TRISD = 0xFFFF;
     
-    // Inicjalizacja stanów początkowych przycisków przed pętlą (zapobiega to
-    // błędnemu "kliknięciu" przy starcie programu)
     char prev6 = PORTDbits.RD6;
     char prev7 = PORTDbits.RD7;
     char current6, current7;
     
     while(1){
-        // 1. Wykonanie tylko JEDNEGO kroku animacji na obrót pętli
         switch(value){
             case 1: binaryUp(); break;
             case 2: binaryDown(); break;
@@ -160,29 +153,25 @@ int main(void) {
             case 9: prng(); break;
         }
         
-        // 2. Globalne opóźnienie definiujące szybkość zmiany klatek
-        __delay32(1000000); 
+        __delay32(750000); 
         
-        // 3. Odczyt przycisków i detekcja zmiany stanu (zbocza)
         current6 = PORTDbits.RD6;
         current7 = PORTDbits.RD7;
         
-        // Warunek na wciśnięcie/puszczenie: jeśli stan się zmienił z 0 na 1
         if(current6 == 1 && prev6 == 0){
             value--;
             if(value < 1){
-                value = 9; // Poprawiony zakres dla 8 trybów
+                value = 9;
             }
         }
         
         if(current7 == 1 && prev7 == 0){
             value++;
             if(value > 9){
-                value = 1; // Poprawiony zakres dla 8 trybów
+                value = 1;
             }
         }
         
-        // Zapisanie aktualnego stanu do zmiennych 'prev' na potrzeby następnego obiegu pętli
         prev6 = current6;
         prev7 = current7;
     }
