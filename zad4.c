@@ -79,10 +79,10 @@ int main(void)
     wyswietl();
 
     // Zmienne do stanów przycisków
-    unsigned char pop_stan_rb5 = 1, stan_rb5 = 1;
-    unsigned char pop_stan_rb4 = 1, stan_rb4 = 1;
-    unsigned char pop_stan_rb3 = 1, stan_rb3 = 1;
-    unsigned char pop_stan_rb2 = 1, stan_rb2 = 1;
+    unsigned char poprzedni_rd6 = 1, stan_rd6 = 1;
+    unsigned char poprzedni_rd7 = 1, stan_rd7 = 1;
+    unsigned char poprzedni_ra7 = 1, stan_ra7 = 1;
+    unsigned char poprzedni_rd13 = 1, stan_rd13 = 1;
 
     while(1)
     {
